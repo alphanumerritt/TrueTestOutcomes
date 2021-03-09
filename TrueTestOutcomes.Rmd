@@ -1,0 +1,362 @@
+---
+title: "Experimentation Tools"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    css: styles.css
+    vertical_layout: scroll
+    logo: logo-sm.png
+    favicon: favicon.png
+    fig_height: 1
+    navbar: 
+      - { title: "Results Analysis", href: "https://sdidev.shinyapps.io/ABTestAnalysis/" }
+      - { title: "Sequential App", href: "https://sdidev.shinyapps.io/sequential-test-calculator/" }
+      - { title: "Sample Size", href: "https://sdidev.shinyapps.io/sample-size-calculator/" }
+      - { title: "Runtime", href: "https://sdidev.shinyapps.io/sample-size-calculator-runtime/" }
+      - { title: "Impact Simulation", href: "https://sdidev.shinyapps.io/test-result-simulator/" }
+runtime: shiny
+---
+
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(shiny)
+library(gt)
+library(tidyr)
+library(dplyr)
+#library(scales)
+library(capture)
+library(tidyverse)
+
+
+# SDI colors are
+# Light Orange: F58220
+# Orange:FF6D00
+# Dark Orange: E45C00
+# Light Teal: 00A2B1
+# Teal: 00747F
+# Dark Teal: 004E54
+# Dark Gray: 515151
+# Light Gray: 9A9896
+
+```
+
+<script>
+$('.navbar-logo').wrap('<a href="https://www.searchdiscovery.com/how-we-help/services/optimization/" target=_blank>');
+</script>
+
+<div style="display: none;">
+```{r url_bookmarking}
+# This chunk is wrapped in a <div> that sets the display to none because, otherwise, a little
+# bit of JS gets rendered that chunk options are unable to turn off.
+enableBookmarking("url")
+setBookmarkExclude(c())
+observe({
+  # Trigger this observer every time an input changes
+  reactiveValuesToList(input)
+  session$doBookmark()
+})
+onBookmarked(function(url) {
+  updateQueryString(url)
+})
+```
+</div>
+
+
+
+Sidebar {.sidebar data-width=270}
+===================================== 
+
+```{r inputs}
+inputPanel(
+  h4("Experiment Configurations"),
+  numericInput("alpha", label = "Confidence Level", value = 95, min = 50, max = 99),
+  numericInput("beta", label = "Power", value = 80, min = 50, max = 99),
+  numericInput("mde", label = "Minimum Detectable Effect", value = 2, min = 0, max = 99),
+  numericInput("tails", label = "How many tails?", value = 1, min = 1, max = 2),
+  numericInput("base", label = "What's the base conversion rate?", value = 5, min = 1, max = 99),
+  numericInput("nonf", label = "Do you want to use a non-inferiority margin? (Ignored in 2-tail)", value = 0, min = 0, max = 99)
+
+)
+
+inputPanel(
+  h4("Simulation Values"),
+  numericInput("testCt", label = "How many tests do you want to simulate?", value = 300, min = 1, max = 20000),
+  numericInput("avgE", label = "Average true effect size", value = 1, min = -100, max = 100),
+  numericInput("traffVolume", label = "How many monthly visitors?", value = 100000, min = 1000),
+  numericInput("cvValue", label = "Whats the $ value of a conversion?", value = 10, min = 0),
+  numericInput("months", label = "How many months to project value over?", value = 6, min = 1, max = 36)
+)
+
+```
+
+
+```{r pdfexport}
+# EXPORT TO PDF
+# Package from github: remotes::install_github("dreamRs/capture")
+renderUI({
+  div(id="exportpdf",
+    capture::capture_pdf(
+      selector = ".level1",
+      filename = "TrueTestOutcomes",
+      icon("download"), "Export to PDF",
+      margin = 2
+    )
+  )
+})
+
+```
+
+```{r storeValues, include=FALSE}
+simVals <- reactiveValues(
+    simulation = NULL,
+    summary = NULL
+  )
+
+observeEvent(c(input$alpha, input$beta, input$mde, input$tails, input$base, input$testCt, input$avgE, input$traffVolume, input$cvValue, input$months), {
+  a <- 1 - (input$alpha/100)
+  b <- input$beta/100 
+  minEff <- input$mde/100
+  tails <- if (input$tails == 2) "two" else "one"
+  baseRate <- input$base/100
+  nTests <- input$testCt
+  avgEff <- input$avgE/100
+  
+  sampSize <- round(power.prop.test(
+          n = NULL,
+          p1 = baseRate,
+          p2 = baseRate*(1+minEff),
+          sig.level = a,
+          power = b,
+          alternative = tails
+        )$n) # %>% print()
+  
+  trueB <- rbinom(n=nTests, size=sampSize, prob = baseRate * (1 + avgEff))
+  trueB <- trueB/sampSize
+  cvCtA <- rbinom(n=nTests, size=sampSize, prob = baseRate)  
+  cvCtB <- rbinom(n=nTests, size=sampSize, prob = trueB) 
+  
+  pvalCalc <- function (cva,cvb,samp) {
+    p <- prop.test(
+      x = c(cva,cvb),
+      n = c(samp,samp),
+      alternative = if (tails == "one") "l" else "t"
+      )$p.value
+    return(p)
+  }
+  
+  testSim <- data.frame(
+    aCVs = cvCtA, 
+    bCVs = cvCtB, 
+    aCVR = cvCtA/sampSize, 
+    bCVR = cvCtB/sampSize, 
+    trueEff = trueB/baseRate-1, 
+    n = sampSize)  
+  
+  testSim['pvalue'] <- apply(
+    testSim[,c('aCVs','bCVs','n')], 
+    1, 
+    function(x) pvalCalc(x['aCVs'],x['bCVs'],x['n'])
+    )
+  
+  testSim <- testSim %>%
+    mutate(
+      aCVR = cvCtA/sampSize, 
+      bCVR = cvCtB/sampSize, 
+      trueEff = trueB/baseRate-1, 
+      obsEff = (cvCtB/sampSize)/(cvCtA/sampSize)-1, 
+      effRatio = obsEff/trueEff,
+      truVal = trueEff * baseRate * input$traffVolume * input$cvValue * input$months,
+      win = pvalue <= a,
+      signErr = obsEff > 0 & trueEff <= 0,
+      falsePos = pvalue <= a & trueEff <= 0,
+      falseNeg = trueEff >= minEff & pvalue > a
+      ) %>%
+    mutate(estVal = obsEff * baseRate * input$traffVolume * input$cvValue * input$months) %>% 
+    mutate(across(where(is.numeric), ~ round(., 3)))
+  
+  testSum <- data.frame(
+    Metric = c(
+      "Count of wins",
+      "Wins / Total tests",
+      "False positive wins",
+      "False positives / Wins",
+      "False negatives (truth >= MDE)",
+      "False negatives / Potential wins",
+      "True - but Observed +",
+      "True value of all tests",
+      "True value of wins",
+      "Estimated value of wins"
+    ),
+    Value = c(
+      sum(testSim['win'] == TRUE),
+      sum(testSim['win'] == TRUE)/nTests,
+      sum(testSim['falsePos'] == TRUE),
+      sum(testSim['falsePos'] == TRUE)/sum(testSim['win'] == TRUE),
+      sum(testSim['falseNeg'] == TRUE),
+      sum(testSim['falseNeg'] == TRUE)/(sum(testSim['win'] == TRUE)+sum(testSim['falseNeg'] == TRUE)),
+      sum(testSim['signErr'] == TRUE),
+      sum(testSim['truVal']),
+      sum(testSim[which(testSim[,'win']==TRUE),'truVal']),
+      sum(testSim[which(testSim[,'win']==TRUE),'estVal'])
+    )
+  )
+  
+  simVals$simulation <- testSim
+  simVals$summary <- testSum
+  
+  
+})
+
+```
+
+
+True Outcomes <!-- {data-icon="fa-percentage"} -->
+===================================== 
+
+Row {.topRow}
+-----------------------------------------------------------------------
+What are the likely true outcomes for a testing program?
+
+Row {data-height=250}
+-----------------------------------------------------------------------
+### 1. Simulate true effects
+```{r trueEffects}
+renderPlot({
+  df <- simVals$simulation
+  
+  ggplot(df, aes(x=trueEff)) +
+    geom_histogram(
+      fill = "blue",
+      alpha = .5
+    ) 
+})
+```
+
+
+### 2. Simulate test samples
+```{r simulatedSamples}
+renderPlot({
+  df <- simVals$simulation
+  
+  ggplot(df, aes(x=trueEff)) +
+    geom_histogram(
+      fill = "blue",
+      alpha = .5
+    ) +
+    geom_histogram(
+      mapping = aes(x=obsEff),
+      fill = "red",
+      alpha = .5
+    )
+})
+
+```
+
+### 3. Calculate outcomes
+```{r resultsExplained}
+renderUI({
+  div(id = "highlights",
+      p("You had a win rate of",
+      round(simVals$summary[2,2]*100),
+      "%."),
+      p(round(simVals$summary[4,2]*100),
+        "% of these were false positives.")
+      )
+})
+
+```
+
+Row {data-height=350}
+-----------------------------------------------------------------------
+
+### Summary
+```{r sumTable}
+render_gt({
+  gt(simVals$summary) %>%
+    fmt_number(columns=vars(Value), rows=c(1,3,5,7), decimals = 0) %>%
+    fmt_percent(columns=vars(Value), rows=c(2,4,6), decimals = 0) %>%
+    fmt_currency(vars(Value), rows=c(8,9,10), decimals = 0) %>%
+    #cols_align(align = "left", columns = vars(Metric)) %>%
+    #cols_align(align = "center", columns = vars(Lower, Observed, Upper)) %>%
+    #cols_label(Metric = "Measure") %>%
+    tab_options(table.width = pct(100))
+})
+
+```
+
+
+### Estimated vs True Value
+```{r dollarValue}
+renderPlot({
+  df <- simVals$summary[8:10,1:2]
+  
+  ggplot(df, aes(x = Metric)) +
+    geom_col(
+      mapping = aes(y = Value, fill=Metric),
+    )
+})
+
+```
+
+
+Row {data-height=350}
+-----------------------------------------------------------------------
+### Winners
+```{r winners}
+rmarkdown::render_delayed({
+  renderPlot({
+    df <- simVals$simulation
+    
+    ggplot(subset(df,win==TRUE), aes(x=trueEff, fill=falsePos)) +
+      geom_histogram(
+        alpha = .5
+      ) 
+  })
+})
+```
+
+
+### Losers
+```{r losers}
+rmarkdown::render_delayed({
+  renderPlot({
+    df <- simVals$simulation
+    
+    ggplot(subset(df,win==FALSE), aes(x=trueEff, fill=signErr)) +
+      geom_histogram(
+        alpha = .5
+      ) 
+  })
+})
+```
+
+Row {data-height=200}
+-----------------------------------------------------------------------
+### Sample Data - Each row is a simulated test outcome based on your inputs
+
+```{r}
+rmarkdown::render_delayed({
+  render_gt({
+    
+    gt(head(simVals$simulation,5)) %>%
+      fmt_percent(columns=vars(aCVR, bCVR, trueEff, obsEff), decimals = 1) %>%
+      fmt_number(columns=vars(pvalue), decimals = 3) %>%
+      fmt_currency(columns=vars(truVal, estVal), decimals = 0) %>%
+      fmt_number(columns=vars(aCVs, bCVs, n), decimals = 0) %>%
+      #cols_align(align = "left", columns = vars(Metric)) %>%
+      #cols_align(align = "center", columns = vars(Lower, Observed, Upper)) %>%
+      #cols_label(Metric = "Measure") %>%
+      tab_options(table.width = pct(100))
+  })
+})
+
+```
+
+
+Row {data-height=50}
+-----------------------------------------------------------------------
+version 1.0  
+To see version history, report bugs and submit feature requests [click here](https://github.com/alphanumerritt/TrueTestOutcomes/issues){target="_blank"}.
+
+
