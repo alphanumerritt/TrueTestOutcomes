@@ -69,6 +69,16 @@ Sidebar {.sidebar data-width=270}
 
 ```{r inputs}
 inputPanel(
+  h4("Simulation Values"),
+  numericInput("testCt", label = "How many tests do you want to simulate?", value = 300, min = 1, max = 20000),
+  numericInput("avgE", label = "Average true effect size", value = 1, min = -100, max = 100),
+  numericInput("traffVolume", label = "How many monthly visitors?", value = 100000, min = 1000),
+  numericInput("months", label = "How many months to project value over?", value = 6, min = 1, max = 36),
+  numericInput("cvValue", label = "Whats the $ value of a conversion?", value = 10, min = 0),
+  actionButton("simulate", label = "Simulate data")
+)
+
+inputPanel(
   h4("Experiment Configurations"),
   numericInput("alpha", label = "Confidence Level", value = 95, min = 50, max = 99),
   numericInput("beta", label = "Power", value = 80, min = 50, max = 99),
@@ -77,15 +87,6 @@ inputPanel(
   numericInput("base", label = "What's the base conversion rate?", value = 5, min = 1, max = 99),
   numericInput("nonf", label = "Do you want to use a non-inferiority margin? (Ignored in 2-tail)", value = 0, min = 0, max = 99)
 
-)
-
-inputPanel(
-  h4("Simulation Values"),
-  numericInput("testCt", label = "How many tests do you want to simulate?", value = 300, min = 1, max = 20000),
-  numericInput("avgE", label = "Average true effect size", value = 1, min = -100, max = 100),
-  numericInput("traffVolume", label = "How many monthly visitors?", value = 100000, min = 1000),
-  numericInput("cvValue", label = "Whats the $ value of a conversion?", value = 10, min = 0),
-  numericInput("months", label = "How many months to project value over?", value = 6, min = 1, max = 36)
 )
 
 ```
@@ -113,7 +114,7 @@ simVals <- reactiveValues(
     summary = NULL
   )
 
-observeEvent(c(input$alpha, input$beta, input$mde, input$tails, input$base, input$testCt, input$avgE, input$traffVolume, input$cvValue, input$months), {
+observeEvent(c(input$simulate, input$alpha, input$beta, input$mde, input$tails, input$base, input$testCt, input$avgE, input$traffVolume, input$cvValue, input$months), {
   a <- 1 - (input$alpha/100)
   b <- input$beta/100 
   minEff <- input$mde/100
@@ -150,7 +151,6 @@ observeEvent(c(input$alpha, input$beta, input$mde, input$tails, input$base, inpu
     bCVs = cvCtB, 
     aCVR = cvCtA/sampSize, 
     bCVR = cvCtB/sampSize, 
-    trueEff = trueB/baseRate-1, 
     n = sampSize)  
   
   testSim['pvalue'] <- apply(
@@ -161,16 +161,14 @@ observeEvent(c(input$alpha, input$beta, input$mde, input$tails, input$base, inpu
   
   testSim <- testSim %>%
     mutate(
-      aCVR = cvCtA/sampSize, 
-      bCVR = cvCtB/sampSize, 
       trueEff = trueB/baseRate-1, 
       obsEff = (cvCtB/sampSize)/(cvCtA/sampSize)-1, 
       effRatio = obsEff/trueEff,
-      truVal = trueEff * baseRate * input$traffVolume * input$cvValue * input$months,
       win = pvalue <= a,
       signErr = obsEff > 0 & trueEff <= 0,
       falsePos = pvalue <= a & trueEff <= 0,
-      falseNeg = trueEff >= minEff & pvalue > a
+      falseNeg = trueEff >= minEff & pvalue > a,
+      truVal = trueEff * baseRate * input$traffVolume * input$cvValue * input$months
       ) %>%
     mutate(estVal = obsEff * baseRate * input$traffVolume * input$cvValue * input$months) %>% 
     mutate(across(where(is.numeric), ~ round(., 3)))
@@ -216,7 +214,9 @@ True Outcomes <!-- {data-icon="fa-percentage"} -->
 
 Row {.topRow}
 -----------------------------------------------------------------------
-What are the likely true outcomes for a testing program?
+```{r intro}
+h1("Real Outcomes vs. Test Outcomes")
+```
 
 Row {data-height=250}
 -----------------------------------------------------------------------
@@ -228,8 +228,11 @@ renderPlot({
   ggplot(df, aes(x=trueEff)) +
     geom_histogram(
       fill = "blue",
-      alpha = .5
-    ) 
+      alpha = .5,
+      binwidth = .001
+    ) +
+    xlab("True difference in conversion rates") +
+    ylab("Count of tests")
 })
 ```
 
@@ -242,27 +245,35 @@ renderPlot({
   ggplot(df, aes(x=trueEff)) +
     geom_histogram(
       fill = "blue",
-      alpha = .5
+      alpha = .5,
+      binwidth = .001
     ) +
     geom_histogram(
       mapping = aes(x=obsEff),
       fill = "red",
-      alpha = .5
-    )
+      alpha = .5,
+      binwidth = .001
+    ) + 
+    xlab("True difference vs. Observed difference") +
+    ylab("Count of tests")
 })
 
 ```
 
-### 3. Calculate outcomes
+### 3. Compare test outcomes to truth
 ```{r resultsExplained}
 renderUI({
-  div(id = "highlights",
-      p("You had a win rate of",
+  div(id = "highlights", styles = "font-size = 14px; text-alignment = center;",
+      p("You're test win rate was",
       round(simVals$summary[2,2]*100),
       "%."),
       p(round(simVals$summary[4,2]*100),
-        "% of these were false positives.")
+        "% of these were false positives."),
+      p("However, ",
+        round(sum(simVals$simulation$trueEff > 0)/input$testCt*100),
+        "% of tests had a true effect > 0."
       )
+  )
 })
 
 ```
