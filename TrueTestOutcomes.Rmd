@@ -71,22 +71,26 @@ Sidebar {.sidebar data-width=270}
 inputPanel(
   h4("Simulation Values"),
   numericInput("testCt", label = "How many tests do you want to simulate?", value = 300, min = 1, max = 20000),
-  numericInput("avgE", label = "Average true effect size", value = 0, min = -100, max = 100),
+  numericInput("avgE", label = "Average true effect size (%)", value = 0, min = -100, max = 100),
   numericInput("traffVolume", label = "How many monthly visitors?", value = 100000, min = 1000),
   numericInput("months", label = "How many months to project value over?", value = 6, min = 1, max = 36),
   numericInput("cvValue", label = "Whats the $ value of a conversion?", value = 10, min = 0),
-  numericInput("testCost", label = "Whats the average cost to produce 1 test?", value = 1000, min = 0, max = 100000),
+  numericInput("testCost", label = "Whats the average cost to produce 1 test?", value = 5000, min = 0, max = 100000),
+  selectInput("dispersion", 
+              label = "Effect dispersion", 
+              choices = c("High","Medium","Low"),
+              selected = "Medium"),
   actionButton("simulate", label = "Simulate data")
 )
 
 inputPanel(
   h4("Experiment Configurations"),
-  numericInput("alpha", label = "Confidence Level", value = 95, min = 50, max = 99),
-  numericInput("beta", label = "Power", value = 80, min = 50, max = 99),
-  numericInput("mde", label = "Minimum Detectable Effect", value = 2, min = 0, max = 99),
-  numericInput("tails", label = "How many tails?", value = 1, min = 1, max = 2),
-  numericInput("base", label = "What's the base conversion rate?", value = 5, min = 1, max = 99),
-  numericInput("nonf", label = "Do you want to use a non-inferiority margin? (Ignored in 2-tail)", value = 0, min = 0, max = 99)
+  numericInput("alpha", label = "Confidence Level (%)", value = 95, min = 50, max = 99),
+  numericInput("beta", label = "Power (%)", value = 80, min = 50, max = 99),
+  numericInput("mde", label = "Minimum Detectable Effect (%)", value = 10, min = 0, max = 99),
+  numericInput("tails", label = "WIP - How many tails?", value = 1, min = 1, max = 2),
+  numericInput("base", label = "What's the base conversion rate? (%)", value = 5, min = 1, max = 99),
+  numericInput("nonf", label = "WIP - Do you want to use a non-inferiority margin? (%) 1-tail only", value = 0, min = 0, max = 99)
 
 )
 
@@ -115,7 +119,7 @@ simVals <- reactiveValues(
     summary = NULL
   )
 
-observeEvent(c(input$simulate, input$alpha, input$beta, input$mde, input$tails, input$base, input$testCt, input$avgE, input$traffVolume, input$cvValue, input$months, input$testCost), {
+observeEvent(c(input$simulate, input$dispersion, input$alpha, input$beta, input$mde, input$tails, input$base, input$testCt, input$avgE, input$traffVolume, input$cvValue, input$months, input$testCost), {
   a <- 1 - (input$alpha/100)
   b <- input$beta/100 
   minEff <- input$mde/100
@@ -131,10 +135,15 @@ observeEvent(c(input$simulate, input$alpha, input$beta, input$mde, input$tails, 
           sig.level = a,
           power = b,
           alternative = tails
-        )$n) # %>% print()
+        )$n)  
   
-  trueB <- rbinom(n=nTests, size=sampSize, prob = baseRate * (1 + avgEff))
-  trueB <- trueB/sampSize
+  dispersion <- if (input$dispersion == "High") 750 else if (input$dispersion == "Medium") 2000 else 10000   
+  
+  
+  trueB <- rbinom(n=nTests, size=dispersion, prob = baseRate * (1 + avgEff)) 
+  #trueB <- rnorm(nTests, mean = input$avgE/100, sd = stDev/100) %>% print()
+  #trueB <- (trueB+1)*baseRate %>% print()
+  trueB <- trueB/dispersion
   cvCtA <- rbinom(n=nTests, size=sampSize, prob = baseRate)  
   cvCtB <- rbinom(n=nTests, size=sampSize, prob = trueB) 
   
@@ -236,13 +245,13 @@ renderPlot({
     geom_histogram(
       fill = "blue",
       alpha = .5,
-      binwidth = .001
+      #binwidth = .001
     ) +
     geom_histogram(
       mapping = aes(x=obsEff),
       fill = "red",
       alpha = .0,
-      binwidth = .001
+      #binwidth = .001
     ) +
     scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
     xlab("True difference in conversion rates") +
@@ -261,13 +270,13 @@ renderPlot({
     geom_histogram(
       fill = "blue",
       alpha = .5,
-      binwidth = .001
+      #binwidth = .001
     ) +
     geom_histogram(
       mapping = aes(x=obsEff),
       fill = "red",
       alpha = .5,
-      binwidth = .001
+      #binwidth = .001
     ) + 
     scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
     xlab("True difference vs. Observed difference") +
@@ -352,7 +361,7 @@ rmarkdown::render_delayed({
     
     ggplot(subset(df,win==TRUE), aes(x=trueEff, fill=falsePos)) +
       geom_histogram(
-        binwidth = .001,
+        #binwidth = .001,
         alpha = .5
       ) +
       scale_fill_manual(values = c("blue", "red")) +
@@ -367,7 +376,7 @@ rmarkdown::render_delayed({
 ```
 
 
-### Losers
+### Inconclusive tests
 ```{r losers}
 rmarkdown::render_delayed({
   renderPlot({
@@ -375,7 +384,7 @@ rmarkdown::render_delayed({
     
     ggplot(subset(df,win==FALSE), aes(x=trueEff)) + # , fill=signErr)) +
       geom_histogram(
-        binwidth = .001,
+        #binwidth = .001,
         alpha = .5
       ) +
       scale_fill_manual(values = c("blue", "red")) +
@@ -414,7 +423,7 @@ rmarkdown::render_delayed({
 
 Row {data-height=50}
 -----------------------------------------------------------------------
-version 1.0  
+version 1.1  
 To see version history, report bugs and submit feature requests [click here](https://github.com/alphanumerritt/TrueTestOutcomes/issues){target="_blank"}.
 
 
