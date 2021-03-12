@@ -164,12 +164,30 @@ form {
 
 /* Explantions above 1st row plots */
 #exp1, #exp2 {
-	height: 25% !important;
+	height: 30% !important;
 }
 
 /* Plots in first row */
 #plot1, #plot2 {
-	height: 75% !important;
+	height: 70% !important;
+}
+
+/* top row cols */
+.threecol {
+	width: 33%;
+}
+
+/* emphasized text */
+strong {
+	color: #3176fd;
+	font-weight: 900;
+}
+
+/* summary highlights in top row */
+.highlights {
+	font-style: italic;
+	color: #464444;
+    font-size: 14px;
 }
 
 

@@ -77,8 +77,8 @@ inputPanel(
   numericInput("cvValue", label = "Whats the $ value of a conversion?", value = 10, min = 0),
   numericInput("testCost", label = "Whats the average cost to produce 1 test?", value = 5000, min = 0, max = 100000),
   selectInput("dispersion", 
-              label = "Effect dispersion", 
-              choices = c("High","Medium","Low"),
+              label = "Effect dispersion (How wide do you want true effects to be distributed?)", 
+              choices = c("Wide","Medium","Narrow"),
               selected = "Medium"),
   actionButton("simulate", label = "Simulate data")
 )
@@ -137,7 +137,7 @@ observeEvent(c(input$simulate, input$dispersion, input$alpha, input$beta, input$
           alternative = tails
         )$n)  
   
-  dispersion <- if (input$dispersion == "High") 750 else if (input$dispersion == "Medium") 2000 else 10000   
+  dispersion <- if (input$dispersion == "Wide") 750 else if (input$dispersion == "Medium") 2000 else 10000   
   
   
   trueB <- rbinom(n=nTests, size=dispersion, prob = baseRate * (1 + avgEff)) 
@@ -237,7 +237,8 @@ h1("Real Outcomes vs. Test Outcomes")
 
 Row {data-height=380}
 -----------------------------------------------------------------------
-### 1. Simulate true effects
+### 1. Simulate true effects {.threecol}
+
 ```{r trueEffects}
 output$exp1 <- renderUI({
   div("First, we simulate the true, underlying effects, or relative difference between test and control, for our batch of tests. These are normally distributed around",
@@ -282,14 +283,14 @@ plotOutput("plot1")
 ```
 
 
-### 2. Simulate test samples
+### 2. Simulate test samples {.threecol}
 
 ```{r simulatedSamples}
 output$exp2 <- renderUI({
   div("Next, we create random samples for our control and test groups. The control conversion rate is ",
       strong(paste0(input$base,"%")),
       " for each test, but both control and test groups are random samples of ",
-      strong(paste0(simVals$sample," visitors,")),
+      strong(paste0(format(round(simVals$sample), big.mark=",", scientific = FALSE)," visitors,")),
       " based on selected test inputs. Observed effects are then calculated."
   )
 })
@@ -328,23 +329,28 @@ plotOutput("plot2")
 ```
 
 
-### 3. Compare test outcomes to truth
+### 3. Compare test outcomes to truth {.threecol}
 ```{r resultsExplained}
-renderUI({
-  div(id = "highlights", style = "font-size: 14px; max-width: 300px;",
-      p("Now that we have data from many tests and we know the underlying truths behind those tests, we can see the impact of random variation and controlled experimentation on aggregate business results."),
+output$exp3 <- renderUI({
+  div(
+      p("Now that we have data from many tests and we know the underlying truths behind those tests, we can see the impact of random variation and controlled experimentation on aggregate business results:"),
+      div(class = "highlights",
       p("Our test win rate was",
       strong(paste0(round(simVals$summary[2,2]*100),"%.")),
       "Not bad!"),
       p("Only ",
-        paste0(round(simVals$summary[4,2]*100),"%"),
-        " of these were false positives."),
-      p("However, ",
-        paste0(round(sum(simVals$simulation$trueEff > 0)/input$testCt*100),"%"),
-        " of tests had a true effect > 0."
+        strong(paste0(round(simVals$summary[4,2]*100),"%")),
+        " of these were false positives.",
+        "However, a total of",
+        strong(paste0(round(sum(simVals$simulation$trueEff > 0)/input$testCt*100),"%")),
+        " of tests actually had true effects > 0. ",
+        "So we missed out on some potential winners."
       ),
   )
+  )
 })
+
+uiOutput("exp3")
 
 ```
 
@@ -391,6 +397,9 @@ renderPlot({
       "ROI of testing (wins - total - cost)" = "ROI")) +
     scale_y_continuous(labels = scales::dollar) +
     scale_fill_manual(values = c("FALSE" = "red", "TRUE" = "blue")) +
+    geom_text(
+      mapping = aes(y = Value+(input$testCt*input$testCost*.1), label = paste0("$",format(Value, big.mark=",", digits = 0, scientific = FALSE)))
+    ) +
     theme_light() +
     theme(axis.title.y = element_blank(), legend.position = "none", axis.title.x = element_blank())
 })
@@ -473,7 +482,7 @@ rmarkdown::render_delayed({
 })
 ```
 
-Row {data-height=200}
+Row {data-height=250}
 -----------------------------------------------------------------------
 ### Sample Data - Each row is a simulated test outcome based on your inputs
 
