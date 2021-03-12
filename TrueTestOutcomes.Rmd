@@ -103,7 +103,7 @@ inputPanel(
 renderUI({
   div(id="exportpdf",
     capture::capture_pdf(
-      selector = ".level1",
+      selector = "body",
       filename = "TrueTestOutcomes",
       icon("download"), "Export to PDF",
       margin = 2
@@ -192,7 +192,7 @@ observeEvent(c(input$simulate, input$dispersion, input$alpha, input$beta, input$
       "False positive wins",
       "False positives / Wins",
       "False negatives (truth >= MDE)",
-      "False negatives / Potential wins",
+      "False negatives (truth > 0)",
       "True - but Observed +",
       "ROI without testing",
       "True value of wins",
@@ -206,7 +206,7 @@ observeEvent(c(input$simulate, input$dispersion, input$alpha, input$beta, input$
       sum(testSim['falsePos'] == TRUE),
       sum(testSim['falsePos'] == TRUE)/sum(testSim['win'] == TRUE),
       sum(testSim['falseNeg'] == TRUE),
-      sum(testSim['falseNeg'] == TRUE)/(sum(testSim['win'] == TRUE)+sum(testSim['falseNeg'] == TRUE)),
+      sum(testSim['truVal'] > 0) - sum(testSim['win'] == TRUE),
       sum(testSim['signErr'] == TRUE),
       sum(testSim['truVal']),
       sum(testSim[which(testSim[,'win']==TRUE),'truVal']),
@@ -218,6 +218,7 @@ observeEvent(c(input$simulate, input$dispersion, input$alpha, input$beta, input$
   
   simVals$simulation <- testSim
   simVals$summary <- testSum
+  simVals$sample <- round(sampSize)
   
   
 })
@@ -234,11 +235,20 @@ Row {.topRow}
 h1("Real Outcomes vs. Test Outcomes")
 ```
 
-Row {data-height=250}
+Row {data-height=380}
 -----------------------------------------------------------------------
 ### 1. Simulate true effects
 ```{r trueEffects}
-renderPlot({
+output$exp1 <- renderUI({
+  div("First, we simulate the true, underlying effects, or relative difference between test and control, for our batch of tests. These are normally distributed around",
+      strong(paste0(input$avgE,"%")),
+  "with a ",
+  strong(paste0(input$dispersion)),
+  " spread."
+  )
+})
+
+output$plot1 <- renderPlot({
   df <- simVals$simulation
   
   ggplot(df, aes(x=trueEff)) +
@@ -265,12 +275,26 @@ renderPlot({
          size = 4.0) +
     theme_light()
 })
+
+uiOutput("exp1")
+plotOutput("plot1")
+
 ```
 
 
 ### 2. Simulate test samples
+
 ```{r simulatedSamples}
-renderPlot({
+output$exp2 <- renderUI({
+  div("Next, we create random samples for our control and test groups. The control conversion rate is ",
+      strong(paste0(input$base,"%")),
+      " for each test, but both control and test groups are random samples of ",
+      strong(paste0(simVals$sample," visitors,")),
+      " based on selected test inputs. Observed effects are then calculated."
+  )
+})
+
+output$plot2 <- renderPlot({
   df <- simVals$simulation
   
   ggplot(df, aes(x=trueEff)) +
@@ -298,21 +322,27 @@ renderPlot({
     theme_light()
 })
 
+uiOutput("exp2")
+plotOutput("plot2")
+
 ```
+
 
 ### 3. Compare test outcomes to truth
 ```{r resultsExplained}
 renderUI({
-  div(id = "highlights", styles = "font-size = 14px; text-alignment = center;",
-      p("You're test win rate was",
-      round(simVals$summary[2,2]*100),
-      "%."),
-      p(round(simVals$summary[4,2]*100),
-        "% of these were false positives."),
+  div(id = "highlights", style = "font-size: 14px; max-width: 300px;",
+      p("Now that we have data from many tests and we know the underlying truths behind those tests, we can see the impact of random variation and controlled experimentation on aggregate business results."),
+      p("Our test win rate was",
+      strong(paste0(round(simVals$summary[2,2]*100),"%.")),
+      "Not bad!"),
+      p("Only ",
+        paste0(round(simVals$summary[4,2]*100),"%"),
+        " of these were false positives."),
       p("However, ",
-        round(sum(simVals$simulation$trueEff > 0)/input$testCt*100),
-        "% of tests had a true effect > 0."
-      )
+        paste0(round(sum(simVals$simulation$trueEff > 0)/input$testCt*100),"%"),
+        " of tests had a true effect > 0."
+      ),
   )
 })
 
@@ -325,8 +355,8 @@ Row {data-height=350}
 ```{r sumTable}
 render_gt({
   gt(simVals$summary) %>%
-    fmt_number(columns=vars(Value), rows=c(1,3,5,7), decimals = 0) %>%
-    fmt_percent(columns=vars(Value), rows=c(2,4,6), decimals = 0) %>%
+    fmt_number(columns=vars(Value), rows=c(1,3,5,6,7), decimals = 0) %>%
+    fmt_percent(columns=vars(Value), rows=c(2,4), decimals = 0) %>%
     fmt_currency(vars(Value), rows=c(8,9,10,11,12), decimals = 0) %>%
     #cols_align(align = "left", columns = vars(Metric)) %>%
     #cols_align(align = "center", columns = vars(Lower, Observed, Upper)) %>%

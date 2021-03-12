@@ -162,5 +162,15 @@ form {
 	margin: 15px;
 }
 
+/* Explantions above 1st row plots */
+#exp1, #exp2 {
+	height: 25% !important;
+}
+
+/* Plots in first row */
+#plot1, #plot2 {
+	height: 75% !important;
+}
+
 
 
