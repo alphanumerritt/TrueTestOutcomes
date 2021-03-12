@@ -256,6 +256,13 @@ renderPlot({
     scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
     xlab("True difference in conversion rates") +
     ylab("Count of tests") +
+    geom_vline(xintercept = input$avgE/100, linetype = "dashed", size = .25) +
+    annotate(geom="text", x= input$avgE/100,
+         y=input$testCt/20, 
+         label= paste0(input$avgE,"% avg. effect"),
+        # fontface = "bold",
+         angle = 90,
+         size = 4.0) +
     theme_light()
 })
 ```
@@ -281,6 +288,13 @@ renderPlot({
     scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
     xlab("True difference vs. Observed difference") +
     ylab("Count of tests") +
+    geom_vline(xintercept = input$avgE/100, linetype = "dashed", size = .25) +
+    annotate(geom="text", x= input$avgE/100,
+         y=input$testCt/20, 
+         label= paste0(input$avgE,"% avg. effect"),
+        # fontface = "bold",
+         angle = 90,
+         size = 4.0) +
     theme_light()
 })
 
@@ -326,11 +340,13 @@ render_gt({
 ### Value of tests
 ```{r dollarValue}
 renderPlot({
-  df <- simVals$summary[8:12,1:2]
+  df <- simVals$summary[8:12,1:2] %>%
+    mutate(pos = Value > 0)
   
-  ggplot(df, aes(x = Metric)) +
+  ggplot(df, aes(x = Metric, fill = pos)) +
     geom_col(
       mapping = aes(y = Value),
+      alpha = .5
     ) +
     scale_x_discrete(#guide = guide_axis(n.dodge = 2),
        limits = c("ROI without testing",
@@ -344,8 +360,9 @@ renderPlot({
       "Cost of testing" = "Cost",
       "ROI of testing (wins - total - cost)" = "ROI")) +
     scale_y_continuous(labels = scales::dollar) +
+    scale_fill_manual(values = c("FALSE" = "red", "TRUE" = "blue")) +
     theme_light() +
-    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title.y = element_blank(), legend.position = "none", axis.ticks.y = element_blank(), axis.title.x = element_blank())
+    theme(axis.title.y = element_blank(), legend.position = "none", axis.title.x = element_blank())
 })
 
 ```
@@ -369,8 +386,22 @@ rmarkdown::render_delayed({
       guides(color = "Error") +
       xlab("True difference in conversion rates") +
       ylab("Count of tests") +
+      geom_vline(xintercept = 0-input$nonf/100, linetype = "dashed", size = .25) +
+      annotate(geom="text", x= 0-input$nonf/100,
+           y=simVals$summary[1,2]/15, 
+           label= paste0("Null hypothesis threshold"),
+          # fontface = "bold",
+           angle = 90,
+           size = 4.0) +
+      geom_vline(xintercept = input$mde/100, linetype = "dashed", size = .25) +
+      annotate(geom="text", x= input$mde/100,
+           y=simVals$summary[1,2]/15, 
+           label= paste0("MDE"),
+          # fontface = "bold",
+           angle = 90,
+           size = 4.0) +
       theme_light() +
-      theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "none")
+      theme(legend.position = "none")
   })
 })
 ```
@@ -392,8 +423,22 @@ rmarkdown::render_delayed({
       guides(color = "Error") +
       xlab("True difference in conversion rates") +
       ylab("Count of tests") +
+      geom_vline(xintercept = 0-input$nonf/100, linetype = "dashed", size = .25) +
+      annotate(geom="text", x= 0-input$nonf/100,
+           y=(input$testCt-simVals$summary[1,2])/15, 
+           label= paste0("Null hypothesis threshold"),
+          # fontface = "bold",
+           angle = 90,
+           size = 4.0) +
+      geom_vline(xintercept = input$mde/100, linetype = "dashed", size = .25) +
+      annotate(geom="text", x= input$mde/100,
+           y=(input$testCt-simVals$summary[1,2])/15, 
+           label= paste0("MDE"),
+          # fontface = "bold",
+           angle = 90,
+           size = 4.0) +
       theme_light() +
-      theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "none")
+      theme(legend.position = "none")
   })
 })
 ```
