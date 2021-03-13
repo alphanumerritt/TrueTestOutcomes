@@ -226,7 +226,7 @@ observeEvent(c(input$simulate, input$dispersion, input$alpha, input$beta, input$
 ```
 
 
-True Outcomes <!-- {data-icon="fa-percentage"} -->
+Real Outcomes <!-- {data-icon="fa-percentage"} -->
 ===================================== 
 
 Row {.topRow}
@@ -336,16 +336,21 @@ output$exp3 <- renderUI({
       p("Now that we have data from many tests and we know the underlying truths behind those tests, we can see the impact of random variation and controlled experimentation on aggregate business results:"),
       div(class = "highlights",
       p("Our test win rate was",
-      strong(paste0(round(simVals$summary[2,2]*100),"%.")),
-      "Not bad!"),
-      p("Only ",
+      strong(paste0(round(simVals$summary[2,2]*100),"%")),
+      ", with ",
         strong(paste0(round(simVals$summary[4,2]*100),"%")),
-        " of these were false positives.",
-        "However, a total of",
-        strong(paste0(round(sum(simVals$simulation$trueEff > 0)/input$testCt*100),"%")),
-        " of tests actually had true effects > 0. ",
-        "So we missed out on some potential winners."
-      ),
+        " of these being false positives."),
+      p(strong(simVals$summary[5,2]),
+        " of our false negatives had effects >= our ",
+        paste0(input$mde,"% "),
+        "MDE. With a cost of ",
+        paste0("$",format(input$testCost, big.mark=",", scientific = FALSE)),
+        " per test, we netted out with a ",
+        strong(paste0("$",format(round(simVals$summary[12,2]), big.mark=",", scientific = FALSE))),
+        "ROI where, without testing, the total value of our ideas was ",
+        strong(paste0("$",format(round(simVals$summary[8,2]), big.mark=",", scientific = FALSE))),
+        "."
+      )
   )
   )
 })
@@ -354,8 +359,8 @@ uiOutput("exp3")
 
 ```
 
-Row {data-height=350}
------------------------------------------------------------------------
+Row {data-height=450}
+----------------------------------------------------------------------
 
 ### Summary
 ```{r sumTable}
@@ -364,7 +369,7 @@ render_gt({
     fmt_number(columns=vars(Value), rows=c(1,3,5,6,7), decimals = 0) %>%
     fmt_percent(columns=vars(Value), rows=c(2,4), decimals = 0) %>%
     fmt_currency(vars(Value), rows=c(8,9,10,11,12), decimals = 0) %>%
-    #cols_align(align = "left", columns = vars(Metric)) %>%
+    cols_align(align = "left", columns = vars(Metric)) %>%
     #cols_align(align = "center", columns = vars(Lower, Observed, Upper)) %>%
     #cols_label(Metric = "Measure") %>%
     tab_options(table.width = pct(100))
@@ -375,7 +380,18 @@ render_gt({
 
 ### Value of tests
 ```{r dollarValue}
-renderPlot({
+output$exp4 <- renderUI({
+  div("We've extrapolated the value of each test by multiplying the true difference in conversion rate by ",
+      strong(paste0(format(input$traffVolume, big.mark=",", scientific = FALSE))),
+  " visitors per month for ",
+  strong(paste0(input$months)),
+  " months at a value of ",
+  strong(paste0("$",format(input$cvValue, big.mark=",", scientific = FALSE))),
+  " per incremental conversion. Notice how the estimated value, based on observed effect, is usually greater than the true value!"
+  )
+})
+
+output$valplot <- renderPlot({
   df <- simVals$summary[8:12,1:2] %>%
     mutate(pos = Value > 0)
   
@@ -398,27 +414,41 @@ renderPlot({
     scale_y_continuous(labels = scales::dollar) +
     scale_fill_manual(values = c("FALSE" = "red", "TRUE" = "blue")) +
     geom_text(
-      mapping = aes(y = Value+(input$testCt*input$testCost*.1), label = paste0("$",format(Value, big.mark=",", digits = 0, scientific = FALSE)))
+      mapping = aes(y = Value, label = paste0("$",format(Value, big.mark=",", digits = 0, scientific = FALSE))),
+      position = position_stack(vjust = .5)
     ) +
     theme_light() +
     theme(axis.title.y = element_blank(), legend.position = "none", axis.title.x = element_blank())
 })
 
+uiOutput("exp4")
+plotOutput("valplot")
+
 ```
 
 
-Row {data-height=350}
+Row {data-height=450}
 -----------------------------------------------------------------------
 ### Winners
 ```{r winners}
-rmarkdown::render_delayed({
-  renderPlot({
+output$exp5 <- renderUI({
+  div("Any test with statistical confidence >= ",
+      strong(paste0(input$alpha,"%")),
+      " is a \"win\". As long as the true effect is > 0, it's a true win. It's a false positive when the observed effect is significantly positive while the true effect is <= 0. Oof! Fortunately, the false positive rate of ",
+      strong(paste0(100-input$alpha,"%")),
+      " allowed by our statistical design assumes the null hypothesis is only ",
+      strong("barely"),
+      " true every time. Since that's not the case, our actual false positive rate will always be lower than that prescribed by our design.")
+})
+
+#rmarkdown::render_delayed({
+output$winplot <-  renderPlot({
     df <- simVals$simulation
-    
+
     ggplot(subset(df,win==TRUE), aes(x=trueEff, fill=falsePos)) +
       geom_histogram(
-        #binwidth = .001,
         alpha = .5
+        #binwidth = function(x)  (max(x)-min(x))/nclass.Sturges(x)
       ) +
       scale_fill_manual(values = c("blue", "red")) +
       scale_x_continuous(labels = scales::percent) +
@@ -442,20 +472,37 @@ rmarkdown::render_delayed({
       theme_light() +
       theme(legend.position = "none")
   })
-})
+#})
+
+uiOutput("exp5")
+plotOutput("winplot")
 ```
 
 
 ### Inconclusive tests
 ```{r losers}
-rmarkdown::render_delayed({
-  renderPlot({
+output$exp6 <- renderUI({
+  div("Any insignificant test result is considered \"inconclusive\". In most cases, we'd be happy with any result > 0, but we've chosen an MDE of ",
+      strong(paste0(input$mde,"%")),
+      " and a power of ",
+      strong(paste0(input$beta,"%")),
+      " which means that if the true effect were ",
+      strong(paste0(input$mde,"%")),
+      " every time, we'd end up with a win, ",
+      strong(paste0(input$beta,"%")),
+      " of the time. But again, this assumes that the true effect is equal to our MDE in every winning scenario. That's clearly never the case, so our false negative rate will always be lower than the ",
+      strong(paste0(100-input$beta,"%")),
+      " prescribed by the test design.")
+})
+
+# rmarkdown::render_delayed({
+output$lossplot <-  renderPlot({
     df <- simVals$simulation
-    
-    ggplot(subset(df,win==FALSE), aes(x=trueEff)) + # , fill=signErr)) +
+
+    ggplot(subset(df,win==FALSE), aes(x=trueEff, fill=falseNeg)) + 
       geom_histogram(
-        #binwidth = .001,
         alpha = .5
+        #binwidth = function(x) (max(x)-min(x))/nclass.Sturges(x)
       ) +
       scale_fill_manual(values = c("blue", "red")) +
       scale_x_continuous(labels = scales::percent) +
@@ -479,22 +526,25 @@ rmarkdown::render_delayed({
       theme_light() +
       theme(legend.position = "none")
   })
-})
+# })
+
+uiOutput("exp6")
+plotOutput("lossplot")
 ```
 
-Row {data-height=250}
+Row {data-height=300}
 -----------------------------------------------------------------------
-### Sample Data - Each row is a simulated test outcome based on your inputs
+### Sample Data: Each row is a simulated test outcome based on your inputs
 
 ```{r}
 rmarkdown::render_delayed({
   render_gt({
     
-    gt(head(simVals$simulation,5)) %>%
+    gt(head(simVals$simulation[,c(3:8,10,12,13,15,16)],10)) %>%
       fmt_percent(columns=vars(aCVR, bCVR, trueEff, obsEff), decimals = 1) %>%
       fmt_number(columns=vars(pvalue), decimals = 3) %>%
       fmt_currency(columns=vars(truVal, estVal), decimals = 0) %>%
-      fmt_number(columns=vars(aCVs, bCVs, n), decimals = 0) %>%
+      fmt_number(columns=vars(n), decimals = 0) %>%
       #cols_align(align = "left", columns = vars(Metric)) %>%
       #cols_align(align = "center", columns = vars(Lower, Observed, Upper)) %>%
       #cols_label(Metric = "Measure") %>%
@@ -507,7 +557,7 @@ rmarkdown::render_delayed({
 
 Row {data-height=50}
 -----------------------------------------------------------------------
-version 1.1  
+version 1.2  
 To see version history, report bugs and submit feature requests [click here](https://github.com/alphanumerritt/TrueTestOutcomes/issues){target="_blank"}.
 
 

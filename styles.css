@@ -1,4 +1,4 @@
-/* AB test results css */
+/* True results simulation css */
 
 /* Format input headings */
 h4 {
@@ -10,47 +10,6 @@ h4 {
 /* Panel title margin */
 h1 {
 	margin-top: 10px;
-}
-
-/* Key results outer container */
-#resultsContainer {
-	text-align: center;
-	margin: auto;
-	padding: 30px;
-}
-
-/* Key Results A & B & significance formatting */
-#resultsRow1, #resultsRow4 {
-	font-size: 16px;
-	font-weight: 600;
-}
-
-/* Set key results div widths */
-#resultsRow1Cell1, #resultsRow1Cell2, #resultsRow2Cell1, #resultsRow2Cell2 {
-	display: inline-block;
-	width: 30%;
-}
-
-/* Key results font for conversion rates */
-#resultsRow2, #resultsRow5 {
-	font-size: 20px;
-	font-weight: 600;
-	color: #515151;
-}
-
-/* Key results main outcome font */
-#resultsRow3 {
-	font-size: 80px;
-	font-weight: 700;
-	/*color: #004E54;*/
-	line-height: 1;
-	padding-top: 25px;
-	letter-spacing: -4px;
-}
-
-/* Key results significance padding */
-#resultsRow5 {
-	padding-top: 30px;
 }
 
 /* Full results table shrink row size */
@@ -73,38 +32,6 @@ h1 {
 	width: 100%;
 }
 
-/*.navbar, .container-fluid {
-  visibility: hidden;
-  display: none;
-}
-
-body {
-	padding-top: 0px;
-}*/
-
-/* Format the title bar */
-.navbar{
-  font-family: "Lato",helvetica,arial,sans-serf; 
-  background-color: #000000;
-  text-align: center;
-} 
-
-/* Navbar lineheight */
-.navbar-nav>li>a {
-	line-height: 1.42857143;
-	padding-top: 10px !important;
-	padding-bottom: 10px !important;
-}
-
-/* Numerical inputs */
-.form-control {
-  font-size: 16px;
-  padding: 0 10px;
-  /*background-color: #bdd4f9;
-  border: none;*/
-  height: 30px;
-  width: 150px;
-}
 
 /* Set the main body/text font */
 p, a, body {
@@ -122,17 +49,6 @@ p, a, body {
     border-color: #868383;	
 }
 
-/* screen shot formats */
-#ssA, #ssB {
-	padding: 15px;
-	display: inline;
-}
-
-#ssA img, #ssB img {
-	max-width: 45%;
-	margin: 10px;
-	border: 1px solid lightgrey;
-}
 
 /* Center top row blocks */
 #testTitle, #hypothesis, #imagesboth {
@@ -152,10 +68,15 @@ p, a, body {
 	flex-basis: auto !important;
 }
 
-/* Fix padding above input pannel 
-form {
-	padding-top: 5px;
-} */
+/* Numerical inputs */
+.form-control {
+  font-size: 16px;
+  padding: 0 10px;
+  /*background-color: #bdd4f9;
+  border: none;*/
+  height: 30px;
+  width: 150px;
+}
 
 /* pdf button */
 #exportpdf {
@@ -170,6 +91,26 @@ form {
 /* Plots in first row */
 #plot1, #plot2 {
 	height: 70% !important;
+}
+
+/* Explanation 2nd row */
+#exp4 {
+	height: 15% !important;
+}
+
+/* Plots in 2nd row */
+#valplot {
+	height: 85% !important;
+}
+
+/* Explanation 3rd row */
+#exp5, #exp6 {
+	height: 25% !important;
+}
+
+/* Plots in 3rd row */
+#winplot, #lossplot {
+	height: 75% !important;
 }
 
 /* top row cols */
@@ -188,7 +129,98 @@ strong {
 	font-style: italic;
 	color: #464444;
     font-size: 14px;
+    padding: 15px;
+}
+
+/* Format the title bar */
+.navbar{
+  font-family: "Lato",helvetica,arial,sans-serf; 
+  background-color: #000000;
+  text-align: center;
+} 
+
+/* Navbar lineheight */
+.navbar-nav>li>a {
+	line-height: 1.42857143;
+	padding-top: 10px !important;
+	padding-bottom: 10px !important;
+}
+
+/* Set SDI logo size */
+.navbar-logo img {
+	max-width: 150px;
+	margin-top:13px;
 }
 
 
+/* LOTS of stuff here just to get the navigation bar in order */
+
+.navbar-inverse {
+  background-color: #221f20;
+  border-color: none;
+  padding: 10px;
+}
+
+.navbar-right {
+  font-family: "Lato",helvetica,arial,sans-serif;
+  position: absolute;
+  display: block;
+  font-size: 1.2em;
+  color: white;
+}
+
+ul.nav.navbar-nav.navbar-right {
+  background: #009CAB;
+  visibility: visible;
+  opacity: 1;
+  display: block;
+  min-width: 300px;
+  position: relative;
+  transition: all 0.5s ease;
+  padding: 12px 10px 12px 10px;
+}
+
+ul.nav.navbar-nav.navbar-right::before {
+  content: "More Experimentation Tools";
+  }
+
+ul.nav.navbar-nav.navbar-right:hover > li
+{
+  visibility: visible;
+  opacity: 1;
+  display: block;
+}
+
+ul.nav.navbar-nav.navbar-right li {
+  color: #fff;
+  display: none;
+  visibility: hidden;
+  opacity: 0;
+  float: left;
+  padding: 0;
+  position: relative;
+  transition-duration: 0.5s;
+}
+  
+ul.nav.navbar-nav.navbar-right li a {
+  color: #fff;
+  font-weight: normal;
+  font-size: 0.9em;
+    padding: 5px 0 5px 5px;
+}
+
+ul.nav.navbar-nav.navbar-right li:hover {
+  background: #00727C;
+}
+
+ul.nav.navbar-nav.navbar-right li>a:hover {
+  background-color: #004D53;
+}
+
+ul.nav.navbar-nav.navbar-right li {
+  clear: both;
+  width: 100%;
+}
+
+/* End all the stuff for the global nav */
 
