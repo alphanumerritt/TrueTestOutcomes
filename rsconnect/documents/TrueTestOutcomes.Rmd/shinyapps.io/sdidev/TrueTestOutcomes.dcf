@@ -1,0 +1,12 @@
+name: TrueTestOutcomes
+title: TrueTestOutcomes
+username:
+account: sdidev
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 3762600
+bundleId: 4336041
+url: https://sdidev.shinyapps.io/TrueTestOutcomes/
+when: 1615560736.03987
+asMultiple: FALSE
+asStatic: FALSE

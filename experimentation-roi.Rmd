@@ -237,7 +237,7 @@ h1("Real Outcomes vs. Test Outcomes")
 
 Row {data-height=380}
 -----------------------------------------------------------------------
-### 1. Simulate true effects {.threecol}
+### 1st: Simulate true effects {.threecol}
 
 ```{r trueEffects}
 output$exp1 <- renderUI({
@@ -283,7 +283,7 @@ plotOutput("plot1")
 ```
 
 
-### 2. Simulate test samples {.threecol}
+### 2nd: Simulate test samples {.threecol}
 
 ```{r simulatedSamples}
 output$exp2 <- renderUI({
@@ -329,7 +329,7 @@ plotOutput("plot2")
 ```
 
 
-### 3. Compare test outcomes to truth {.threecol}
+### 3rd: Compare test outcomes to truth {.threecol}
 ```{r resultsExplained}
 output$exp3 <- renderUI({
   div(
@@ -358,6 +358,27 @@ output$exp3 <- renderUI({
 uiOutput("exp3")
 
 ```
+
+Row {data-height=300}
+-----------------------------------------------------------------------
+### ROI Component 1: Upside From Winners {.threecol}
+
+- No. of winners
+- $ value of winners
+- Compare to estimated
+- Min/Max effect and avg. effect
+- Lift we missed out on too
+
+### ROI Component 2: Savings From Avoided Losers {.threecol}
+
+- No. of losers avoided
+- $ value of losers
+
+### ROI Component 3: Behavioral Changes From Having Insurance {.threecol}
+
+- Did we take bigger risks? [this could widen dispersion]
+- Did we invest less up front (use MVP)? [this could change cost structure]
+- Did we do more stuff?
 
 Row {data-height=450}
 ----------------------------------------------------------------------

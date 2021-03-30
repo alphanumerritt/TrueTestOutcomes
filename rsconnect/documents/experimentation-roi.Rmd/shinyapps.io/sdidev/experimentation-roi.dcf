@@ -1,0 +1,12 @@
+name: experimentation-roi
+title: experimentation-roi
+username:
+account: sdidev
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 3786146
+bundleId: 4340453
+url: https://sdidev.shinyapps.io/experimentation-roi/
+when: 1615666293.55048
+asMultiple: FALSE
+asStatic: FALSE
