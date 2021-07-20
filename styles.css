@@ -1,5 +1,11 @@
 /* True results simulation css */
 
+/* Limit width on big screens */
+body {
+	max-width: 1600px;
+	margin: auto;
+}
+
 /* Format input headings */
 h4 {
     font-size: 16px;
@@ -46,7 +52,7 @@ p, a, body {
     padding: 6px;
     background: #1967be;
     color: white;
-    border-color: #868383;	
+    border-color: #868383;
 }
 
 
@@ -132,19 +138,6 @@ strong {
     padding: 15px;
 }
 
-/* Format the title bar */
-.navbar{
-  font-family: "Lato",helvetica,arial,sans-serf; 
-  background-color: #000000;
-  text-align: center;
-} 
-
-/* Navbar lineheight */
-.navbar-nav>li>a {
-	line-height: 1.42857143;
-	padding-top: 10px !important;
-	padding-bottom: 10px !important;
-}
 
 /* Set SDI logo size */
 .navbar-logo img {
@@ -155,10 +148,17 @@ strong {
 
 /* LOTS of stuff here just to get the navigation bar in order */
 
+/* Navbar lineheight */
+.navbar-nav>li>a {
+	line-height: 1.42857143;
+	padding-top: 10px !important;
+	padding-bottom: 10px !important;
+}
+
 .navbar-inverse {
   background-color: #221f20;
   border-color: none;
-  padding: 10px;
+  padding: 0px;
 }
 
 .navbar-right {
@@ -174,10 +174,10 @@ ul.nav.navbar-nav.navbar-right {
   visibility: visible;
   opacity: 1;
   display: block;
-  min-width: 300px;
   position: relative;
   transition: all 0.5s ease;
-  padding: 12px 10px 12px 10px;
+  padding: 10px 15px;
+  margin: 7px;
 }
 
 ul.nav.navbar-nav.navbar-right::before {
@@ -201,16 +201,12 @@ ul.nav.navbar-nav.navbar-right li {
   position: relative;
   transition-duration: 0.5s;
 }
-  
+
 ul.nav.navbar-nav.navbar-right li a {
   color: #fff;
   font-weight: normal;
   font-size: 0.9em;
     padding: 5px 0 5px 5px;
-}
-
-ul.nav.navbar-nav.navbar-right li:hover {
-  background: #00727C;
 }
 
 ul.nav.navbar-nav.navbar-right li>a:hover {
@@ -223,4 +219,3 @@ ul.nav.navbar-nav.navbar-right li {
 }
 
 /* End all the stuff for the global nav */
-
