@@ -27,7 +27,7 @@ library(dplyr)
 #library(scales)
 library(capture)
 library(tidyverse)
-
+library(shinyjs)
 
 # SDI colors are
 # Light Orange: F58220
@@ -45,29 +45,12 @@ library(tidyverse)
 $('.navbar-logo').wrap('<a href="https://www.searchdiscovery.com/how-we-help/services/optimization/" target=_blank>');
 </script>
 
-<div style="display: none;">
-```{r url_bookmarking}
-# This chunk is wrapped in a <div> that sets the display to none because, otherwise, a little
-# bit of JS gets rendered that chunk options are unable to turn off.
-enableBookmarking("url")
-setBookmarkExclude(c())
-observe({
-  # Trigger this observer every time an input changes
-  reactiveValuesToList(input)
-  session$doBookmark()
-})
-onBookmarked(function(url) {
-  updateQueryString(url)
-})
-```
-</div>
-
-
-
 Sidebar {.sidebar data-width=270}
 ===================================== 
 
 ```{r inputs}
+useShinyjs(rmd=TRUE)
+
 inputPanel(
   h4("Simulation Values"),
   numericInput("testCt", label = "How many tests do you want to simulate?", value = 300, min = 1, max = 20000),
@@ -88,9 +71,11 @@ inputPanel(
   numericInput("alpha", label = "Confidence Level (%)", value = 95, min = 50, max = 99),
   numericInput("beta", label = "Power (%)", value = 80, min = 50, max = 99),
   numericInput("mde", label = "Minimum Detectable Effect (%)", value = 10, min = 0, max = 99),
-  numericInput("tails", label = "WIP - How many tails?", value = 1, min = 1, max = 2),
-  numericInput("base", label = "What's the base conversion rate? (%)", value = 5, min = 1, max = 99),
-  numericInput("nonf", label = "WIP - Do you want to use a non-inferiority margin? (%) 1-tail only", value = 0, min = 0, max = 99)
+  disabled(
+    numericInput("tails", label = "(Locked) How many tails?", value = 1, min = 1, max = 2)
+    ),
+  numericInput("base", label = "What's the base conversion rate? (%)", value = 5, min = 1, max = 99)
+  # numericInput("nonf", label = "WIP - Do you want to use a non-inferiority margin? (%) 1-tail only", value = 0, min = 0, max = 99)
 
 )
 
@@ -379,6 +364,25 @@ Row {data-height=300}
 - Did we take bigger risks? [this could widen dispersion]
 - Did we invest less up front (use MVP)? [this could change cost structure]
 - Did we do more stuff?
+
+Row {data-height=150}
+----------------------------------------------------------------------
+
+# For something totally different
+- Enter total costs of program
+- Enter investments (kind of same as total costs), get test outputs
+- Output range of outcomes vs single one (probabilities)
+- Take info from actual experiments ran
+- % ROI
+- Make it so people can't hack it to get what they want
+- Decay rate
+# Or
+- Choose time period
+- Give each test a random end date
+- Apply roi to time period
+- Distinguish realized ROI and unrealized ROI
+- Assign a decay rate
+- Opportunity cost of testing (could do more without it)
 
 Row {data-height=450}
 ----------------------------------------------------------------------
