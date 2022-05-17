@@ -9,11 +9,13 @@ output:
     favicon: favicon.png
     fig_height: 1
     navbar: 
-      - { title: "Results Analysis", href: "https://sdidev.shinyapps.io/ABTestAnalysis/" }
-      - { title: "Sequential App", href: "https://sdidev.shinyapps.io/sequential-test-calculator/" }
-      - { title: "Sample Size", href: "https://sdidev.shinyapps.io/sample-size-calculator/" }
-      - { title: "Runtime", href: "https://sdidev.shinyapps.io/sample-size-calculator-runtime/" }
-      - { title: "Impact Simulation", href: "https://sdidev.shinyapps.io/test-result-simulator/" }
+      - { title: "Planning: MDE-Based Calculator", href: "https://sdidev.shinyapps.io/sample-size-calculator/" }
+      - { title: "Planning: Runtime-Based Calculator", href: "https://sdidev.shinyapps.io/sample-size-calculator-runtime/" }
+      - { title: "Planning/Analysis: Sequential Testing", href: "https://sdidev.shinyapps.io/sequential-test-calculator/" }
+      - { title: "Analysis: Test Results Assessment", href: "https://sdidev.shinyapps.io/ABTestAnalysis/" }
+      - { title: "Analysis: Bayesian Testing", href: "https://sdidev.shinyapps.io/bayesian-ab-app/" }
+      - { title: "Simulator: A/B Test Result", href: "https://sdidev.shinyapps.io/test-result-simulator/" }
+      - { title: "Simulator: Experimentation ROI", href: "https://sdidev.shinyapps.io/experimentation-roi/" }
 runtime: shiny
 ---
 
@@ -61,6 +63,7 @@ inputPanel(
   numericInput("months", label = "How many months to project value over?", value = 6, min = 1, max = 36),
   numericInput("cvValue", label = "Whats the $ value of a conversion?", value = 10, min = 0),
   numericInput("testCost", label = "Whats the average cost to produce 1 test?", value = 5000, min = 0, max = 100000),
+  numericInput("pctFlat", label = "What percent of effects should be exactly 0?", value = 33, min = 0, max = 100),
   selectInput("dispersion", 
               label = "Effect dispersion (How wide do you want true effects to be distributed?)", 
               choices = c("Wide","Medium","Narrow"),
@@ -109,7 +112,7 @@ simVals <- reactiveValues(
     summary = NULL
   )
 
-observeEvent(c(input$simulate, input$dispersion, input$alpha, input$beta, input$mde, input$tails, input$base, input$testCt, input$avgE, input$traffVolume, input$cvValue, input$months, input$testCost), {
+observeEvent(c(input$simulate, input$dispersion, input$alpha, input$beta, input$mde, input$tails, input$base, input$testCt, input$avgE, input$traffVolume, input$cvValue, input$months, input$testCost, input$pctFlat), {
   a <- 1 - (input$alpha/100)
   b <- input$beta/100 
   minEff <- input$mde/100
@@ -117,6 +120,7 @@ observeEvent(c(input$simulate, input$dispersion, input$alpha, input$beta, input$
   baseRate <- input$base/100
   nTests <- input$testCt
   avgEff <- input$avgE/100
+  pctFlat <- input$pctFlat/100
   
   sampSize <- round(power.prop.test(
           n = NULL,
@@ -127,13 +131,16 @@ observeEvent(c(input$simulate, input$dispersion, input$alpha, input$beta, input$
           alternative = tails
         )$n)  
   
-  dispersion <- if (input$dispersion == "Wide") 750 else if (input$dispersion == "Medium") 2000 else 10000   
+  dispersion <- if (input$dispersion == "Wide") 750 else if (input$dispersion == "Medium") 2000 else 100000   
   
   
-  trueB <- rbinom(n=nTests, size=dispersion, prob = baseRate * (1 + avgEff)) 
+  trueB <- rbinom(n=round(nTests*(1-pctFlat)), size=dispersion, prob = baseRate * (1 + avgEff)) 
   #trueB <- rnorm(nTests, mean = input$avgE/100, sd = stDev/100) %>% print()
   #trueB <- (trueB+1)*baseRate %>% print()
+  
   trueB <- trueB/dispersion
+  trueNull <- rep(baseRate,round(nTests*pctFlat))
+  trueB <- c(trueNull,trueB)
   cvCtA <- rbinom(n=nTests, size=sampSize, prob = baseRate)  
   cvCtB <- rbinom(n=nTests, size=sampSize, prob = trueB) 
   
@@ -545,7 +552,7 @@ rmarkdown::render_delayed({
 
 Row {data-height=50}
 -----------------------------------------------------------------------
-version 1.3  
+version 1.31  
 To see version history, report bugs and submit feature requests [click here](https://github.com/alphanumerritt/TrueTestOutcomes/issues){target="_blank"}.
 
 
